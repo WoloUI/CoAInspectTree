@@ -29,7 +29,7 @@ local function renderFor(unit, slot)
   current.tree = CIT.CAReader.classTree(className, slot)
   if #current.tree == 0 then
     current.retries = (current.retries or 0) + 1
-    CIT.TreePanel.Get().title:SetText("Cargando talentos...")
+    CIT.TreePanel.Get().title:SetText("Loading talents...")
     CIT.TreePanel.Show()
     if current.retries <= 5 then
       local u, s = unit, slot
@@ -44,7 +44,7 @@ local function renderFor(unit, slot)
         end
       end)
     else
-      CIT.TreePanel.Get().title:SetText("Sin datos de talentos")
+      CIT.TreePanel.Get().title:SetText("No talent data")
     end
     return
   end
@@ -54,7 +54,7 @@ local function renderFor(unit, slot)
   local model = CIT.TreeModel.build(current.tree, buildMap)
   local inspectFrame = getInspectFrame()
   if inspectFrame then CIT.TreePanel.AttachTo(inspectFrame) end
-  CIT.TreePanel.Get().title:SetText((UnitName(unit) or "") .. " — spec " .. tostring(slot))
+  CIT.TreePanel.Get().title:SetText((UnitName(unit) or "") .. " — Spec " .. tostring(slot))
 
   -- Selector de spec propio: al hacer clic, re-consulta el árbol de esa spec.
   local _, unlocked = CIT.CAReader.inspectInfo(unit)

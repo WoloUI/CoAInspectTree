@@ -34,7 +34,7 @@ function TP.Get()
 
   local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", frame, "TOP", 0, -6)
-  title:SetText("Árbol de talentos")
+  title:SetText("Talent Tree")
   frame.title = title
 
   -- Botón Comparar (arriba a la derecha).
@@ -45,7 +45,7 @@ function TP.Get()
     insets = { left = 0, right = 0, top = 0, bottom = 0 } })
   cmp.txt = cmp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   cmp.txt:SetAllPoints(cmp)
-  cmp.txt:SetText("Comparar")
+  cmp.txt:SetText("Compare")
   cmp:Hide()
   frame.compareBtn = cmp
 
@@ -69,7 +69,6 @@ function TP.Get()
   frame.scroll = scroll
   frame.buttons = {}      -- pool de NodeButton
   frame.buttonsById = {}  -- clave prefijada -> button (última render)
-  frame.linePool = {}     -- pool de texturas de EdgeLines
   frame:Hide()
   return frame
 end
@@ -163,7 +162,7 @@ local function shownCols(model)
   local cols, tabs = 0, 0
   for _, name in ipairs(order) do
     local ti = byName[name]
-    if ti then cols = cols + (ti.maxX + 1); tabs = tabs + 1 end
+    if ti then cols = cols + (ti.maxX - ti.minX + 1); tabs = tabs + 1 end
   end
   return cols, tabs
 end
@@ -196,15 +195,16 @@ local function renderColumns(f, model, keyPrefix, headerPrefix, startX, cell, ic
           b:SetHeight(iconSize)
           CIT.NodeButton.Style(b, node)
           b:ClearAllPoints()
-          local px = xOffset + (node.x or 0) * cell
-          local py = -TAB_HEADER - ((node.y or 0) * cell)
+          -- Normalizar al origen del tab para columnas compactas y parejas.
+          local px = xOffset + ((node.x or 0) - tabInfo.minX) * cell
+          local py = -TAB_HEADER - (((node.y or 0) - tabInfo.minY) * cell)
           b:SetPoint("TOPLEFT", f.content, "TOPLEFT", px, py)
           f.buttonsById[keyPrefix .. id] = b
         end
       end
 
-      local colW = (tabInfo.maxX + 1) * cell
-      local colH = TAB_HEADER + (tabInfo.maxY + 1) * cell
+      local colW = (tabInfo.maxX - tabInfo.minX + 1) * cell
+      local colH = TAB_HEADER + (tabInfo.maxY - tabInfo.minY + 1) * cell
       if colH > maxColH then maxColH = colH end
       xOffset = xOffset + colW + TAB_COL_GAP
     end
@@ -237,19 +237,16 @@ function CIT.TreePanel.Render(model, myModel)
   local cell = CIT.TreeModel.fitScale(totalCols, BASE_CELL, maxContentW, MIN_CELL)
   local iconSize = math.max(14, cell - 8)
 
-  local edges = {}
   local x, maxColH, btnIndex, headerIndex = renderColumns(f, model, "t", "", 0, cell, iconSize, 0, 0)
-  for _, e in ipairs(model.edges) do edges[#edges + 1] = { from = "t" .. e.from, to = "t" .. e.to } end
 
   if myModel then
     -- x trae un TAB_COL_GAP de más al final; convertirlo en el hueco de sección.
     local dividerX = x - TAB_COL_GAP + math.floor(SECTION_GAP / 2)
     local myStartX = x - TAB_COL_GAP + SECTION_GAP
     local x2, h2
-    x2, h2, btnIndex, headerIndex = renderColumns(f, myModel, "m", "TÚ · ", myStartX, cell, iconSize, btnIndex, headerIndex)
+    x2, h2, btnIndex, headerIndex = renderColumns(f, myModel, "m", "YOU · ", myStartX, cell, iconSize, btnIndex, headerIndex)
     if h2 > maxColH then maxColH = h2 end
     x = x2
-    for _, e in ipairs(myModel.edges) do edges[#edges + 1] = { from = "m" .. e.from, to = "m" .. e.to } end
 
     f.divider = f.divider or f.content:CreateTexture(nil, "BACKGROUND")
     f.divider:SetTexture(0.30, 0.30, 0.36, 0.85)
@@ -270,6 +267,4 @@ function CIT.TreePanel.Render(model, myModel)
   local innerH = math.min(contentH, maxPanelInner)
   f:SetWidth(contentW + 2 * PAD)
   f:SetHeight(innerH + headerTotal + PAD)
-
-  CIT.EdgeLines.Draw(f.content, edges, f.buttonsById, f.linePool)
 end

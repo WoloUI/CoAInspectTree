@@ -57,15 +57,19 @@ function CIT.TreeModel.bounds(model)
   local overallMaxX = 0
   local tabs = {}
   for _, tabName in ipairs(model.tabs) do
-    local maxX, maxY = 0, 0
+    local minX, maxX, minY, maxY
     for _, node in pairs(model.nodes) do
       if node.tab == tabName then
-        if (node.x or 0) > maxX then maxX = node.x end
-        if (node.y or 0) > maxY then maxY = node.y end
+        local x, y = node.x or 0, node.y or 0
+        if not minX or x < minX then minX = x end
+        if not maxX or x > maxX then maxX = x end
+        if not minY or y < minY then minY = y end
+        if not maxY or y > maxY then maxY = y end
       end
     end
+    minX = minX or 0; maxX = maxX or 0; minY = minY or 0; maxY = maxY or 0
     if maxX > overallMaxX then overallMaxX = maxX end
-    table.insert(tabs, { name = tabName, maxX = maxX, maxY = maxY })
+    table.insert(tabs, { name = tabName, minX = minX, maxX = maxX, minY = minY, maxY = maxY })
   end
   return { maxX = overallMaxX, tabs = tabs }
 end

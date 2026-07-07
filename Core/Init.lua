@@ -26,6 +26,6 @@ end
 CIT.RegisterEvent("PLAYER_LOGIN", function()
   CIT.enabled = (_G.C_CharacterAdvancement ~= nil)
   if CIT.enabled then
-    CIT.Log("activo (Character Advancement detectado).")
+    CIT.Log("active (Character Advancement detected).")
   end
 end)
