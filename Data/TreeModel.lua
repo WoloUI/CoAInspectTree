@@ -30,6 +30,7 @@ function CIT.TreeModel.build(rawTree, buildMap)
       maxRank  = learned and learned.maxRank or nil,
       connected = raw.ConnectedNodes or {},
       required  = raw.RequiredIDs or {},
+      spells    = raw.Spells,
     }
     if raw.Tab and not seenTab[raw.Tab] then
       seenTab[raw.Tab] = true

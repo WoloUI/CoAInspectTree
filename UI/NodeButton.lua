@@ -21,6 +21,26 @@ local function colorFor(name)
   return COLORS[name] or { 0.85, 0.70, 0.30 }
 end
 
+-- Intenta obtener un spellID del nodo para mostrar su tooltip real. `node.spells`
+-- puede ser una lista de IDs o de tablas {ID=...}; preferimos el del rango actual.
+local function spellIdFor(node)
+  local sp = node.spells
+  if type(sp) ~= "table" then return nil end
+  local function idOf(v)
+    if type(v) == "number" then return v end
+    if type(v) == "table" then return v.ID or v.SpellID or v.Spell end
+    return nil
+  end
+  local r = (node.rank and node.rank > 0) and node.rank or 1
+  local cand = idOf(sp[r]) or idOf(sp[1])
+  if cand then return cand end
+  for _, v in pairs(sp) do
+    local id = idOf(v)
+    if id then return id end
+  end
+  return nil
+end
+
 -- Crea un botón de nodo hijo de `parent`. Reutilizable (pool en TreePanel).
 function CIT.NodeButton.Create(parent)
   local b = CreateFrame("Button", nil, parent)
@@ -77,10 +97,18 @@ function CIT.NodeButton.Style(button, node)
 
   button:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(node.name or "?")
+    -- Tooltip real del hechizo si podemos resolver el spellID; si no, texto básico.
+    local sid = spellIdFor(node)
+    local shown = false
+    if sid then
+      shown = pcall(GameTooltip.SetHyperlink, GameTooltip, "spell:" .. sid)
+    end
+    if not shown then
+      GameTooltip:SetText(node.name or "?")
+    end
     if node.known and node.rank and node.rank > 0 then
       local r = node.maxRank and (node.rank .. "/" .. node.maxRank) or tostring(node.rank)
-      GameTooltip:AddLine("Rango " .. r, 0.2, 0.85, 0.78)
+      GameTooltip:AddLine("Rank " .. r, 0.2, 0.85, 0.78)
     end
     if node.tab then GameTooltip:AddLine(node.tab, 0.6, 0.6, 0.6) end
     GameTooltip:Show()
