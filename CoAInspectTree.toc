@@ -9,6 +9,7 @@ Core\Log.lua
 Core\Init.lua
 Data\CAReader.lua
 Data\TreeModel.lua
+Core\Debug.lua
 UI\NodeButton.lua
 UI\TreePanel.lua
 UI\InspectHook.lua
