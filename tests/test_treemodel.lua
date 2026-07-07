@@ -56,27 +56,33 @@ T.eq(CIT.TreeModel.fitScale(7, 44, 210), 30, "fitScale reduce para caber")
 T.eq(CIT.TreeModel.fitScale(7, 44, 70, 20), 20, "fitScale respeta minCell")
 T.eq(CIT.TreeModel.fitScale(0, 44, 308), 44, "fitScale con 0 cols devuelve baseCell")
 
--- layoutTabs: Class (primero) + la spec activa según el slot (tab N-ésimo).
+-- layoutTabs: Class primero + la spec con aprendidos (la invertida).
 local order = CIT.TreeModel.layoutTabs(model, 1)
-T.eq(#order, 2, "layoutTabs devuelve Class + spec activa")
+T.eq(#order, 2, "layoutTabs devuelve Class + spec")
 T.eq(order[1], "Class", "Class va primero (izquierda)")
-T.eq(order[2], "Protection", "spec activa (slot 1 -> primer spec tab)")
+T.eq(order[2], "Protection", "spec con aprendidos (Protection)")
 
--- La spec se elige por slot: spec2 y spec3 son otros tabs.
-local m3 = CIT.TreeModel.build({
+local specTree = {
   { ID=1, Name="a", Tab="Fire",   PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
   { ID=2, Name="b", Tab="Frost",  PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
   { ID=3, Name="c", Tab="Arcane", PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
   { ID=4, Name="d", Tab="Class",  PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
-}, {})
-local o1 = CIT.TreeModel.layoutTabs(m3, 1)
-T.eq(o1[1], "Class", "Class primero")
-T.eq(o1[2], "Fire", "slot 1 -> primer spec (Fire)")
-local o2 = CIT.TreeModel.layoutTabs(m3, 2)
-T.eq(o2[2], "Frost", "slot 2 -> segundo spec (Frost)")
-local o3 = CIT.TreeModel.layoutTabs(m3, 3)
-T.eq(o3[2], "Arcane", "slot 3 -> tercer spec (Arcane)")
--- slot fuera de rango cae al primer spec.
-local o9 = CIT.TreeModel.layoutTabs(m3, 9)
-T.eq(o9[2], "Fire", "slot fuera de rango -> primer spec")
+}
+
+-- Regresión: la spec con aprendidos gana sobre el slot. Aprendido en Frost pero
+-- pasando slot 1 -> debe mostrar Frost, NO Fire.
+local mLearned = CIT.TreeModel.build(specTree, { [2] = { rank=1, maxRank=1 } })
+local oL = CIT.TreeModel.layoutTabs(mLearned, 1)
+T.eq(oL[1], "Class", "Class primero")
+T.eq(oL[2], "Frost", "spec con aprendidos (Frost) gana sobre el slot 1")
+
+-- Sin aprendidos (build no cargado): cae al slot, NO muestra todas las specs.
+local mEmpty = CIT.TreeModel.build(specTree, {})
+local e1 = CIT.TreeModel.layoutTabs(mEmpty, 1)
+T.eq(#e1, 2, "sin aprendidos: solo Class + una spec (no todas)")
+T.eq(e1[2], "Fire", "fallback slot 1 -> primer spec")
+local e2 = CIT.TreeModel.layoutTabs(mEmpty, 2)
+T.eq(e2[2], "Frost", "fallback slot 2 -> segundo spec")
+local e9 = CIT.TreeModel.layoutTabs(mEmpty, 9)
+T.eq(e9[2], "Fire", "fallback slot fuera de rango -> primer spec")
 return T.done()

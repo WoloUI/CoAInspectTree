@@ -75,10 +75,10 @@ function CIT.TreeModel.bounds(model)
 end
 
 -- Devuelve la lista ordenada de tabs a mostrar: "Class" primero (a la izquierda)
--- y luego la spec activa. Los tabs siempre vienen en orden spec1, spec2, spec3,
--- Class, así que la spec activa es el tab N-ésimo (no-Class) según `slot`. Esto
--- no depende de qué talentos estén aprendidos, así que funciona aunque el build
--- aún no haya cargado. Las demás specs quedan ocultas.
+-- y luego la spec a la derecha. Preferimos la spec donde el jugador TIENE
+-- talentos aprendidos (la que realmente usa); si ninguna tiene aprendidos (build
+-- aún sin cargar o spec vacía), caemos a la spec N-ésima según `slot`. Nunca se
+-- muestran todas las specs a la vez. Las demás quedan ocultas.
 function CIT.TreeModel.layoutTabs(model, slot)
   local CLASS = "Class"
   local specs = {}
@@ -87,9 +87,24 @@ function CIT.TreeModel.layoutTabs(model, slot)
     if t == CLASS then hasClass = true else specs[#specs + 1] = t end
   end
 
+  -- specs (no-Class) con al menos un talento aprendido.
+  local learnedSpec = {}
+  for _, node in pairs(model.nodes) do
+    if node.known and node.tab ~= CLASS then learnedSpec[node.tab] = true end
+  end
+
   local ordered = {}
   if hasClass then table.insert(ordered, CLASS) end
-  if #specs > 0 then
+
+  local added = false
+  for _, t in ipairs(specs) do
+    if learnedSpec[t] then
+      table.insert(ordered, t)
+      added = true
+    end
+  end
+  -- Ninguna spec con aprendidos: usar la del slot como mejor estimación.
+  if not added and #specs > 0 then
     local idx = slot or 1
     if idx < 1 or idx > #specs then idx = 1 end
     table.insert(ordered, specs[idx])
