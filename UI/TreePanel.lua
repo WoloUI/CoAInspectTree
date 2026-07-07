@@ -69,6 +69,7 @@ function TP.Get()
   frame.scroll = scroll
   frame.buttons = {}      -- pool de NodeButton
   frame.buttonsById = {}  -- clave prefijada -> button (última render)
+  frame.linePool = {}     -- pool de texturas de líneas de conexión
   frame:Hide()
   return frame
 end
@@ -171,7 +172,7 @@ end
 -- clave (para no colisionar IDs entre árboles) y prefijo de header ("YOU · ").
 -- Agrega los rects {x,w} de cada columna a `rects`. Devuelve
 -- (nuevoX, maxColH, btnIndex, headerIndex).
-local function renderColumns(f, model, order, keyPrefix, headerPrefix, startX, cell, iconSize, btnIndex, headerIndex, rects)
+local function renderColumns(f, model, order, keyPrefix, headerPrefix, startX, cell, iconSize, btnIndex, headerIndex, rects, placed)
   local bounds = CIT.TreeModel.bounds(model)
   local byName = {}
   for _, ti in ipairs(bounds.tabs) do byName[ti.name] = ti end
@@ -200,6 +201,7 @@ local function renderColumns(f, model, order, keyPrefix, headerPrefix, startX, c
           local py = -TAB_HEADER - (((node.y or 0) - tabInfo.minY) * cell)
           b:SetPoint("TOPLEFT", f.content, "TOPLEFT", px, py)
           f.buttonsById[keyPrefix .. id] = b
+          placed[keyPrefix .. id] = { px = px, py = py, known = node.known }
         end
       end
 
@@ -263,14 +265,14 @@ function CIT.TreePanel.Render(model, slot, myModel, mySlot)
   local cell = CIT.TreeModel.fitScale(totalCols, BASE_CELL, maxContentW, MIN_CELL)
   local iconSize = math.max(14, cell - 8)
 
-  local rects = {}
-  local x, maxColH, btnIndex, headerIndex = renderColumns(f, model, order1, "t", "", 0, cell, iconSize, 0, 0, rects)
+  local rects, placed = {}, {}
+  local x, maxColH, btnIndex, headerIndex = renderColumns(f, model, order1, "t", "", 0, cell, iconSize, 0, 0, rects, placed)
 
   if myModel then
     -- x trae un TAB_COL_GAP de más al final; convertirlo en el hueco de sección.
     local myStartX = x - TAB_COL_GAP + SECTION_GAP
     local x2, h2
-    x2, h2, btnIndex, headerIndex = renderColumns(f, myModel, order2, "m", "YOU · ", myStartX, cell, iconSize, btnIndex, headerIndex, rects)
+    x2, h2, btnIndex, headerIndex = renderColumns(f, myModel, order2, "m", "YOU · ", myStartX, cell, iconSize, btnIndex, headerIndex, rects, placed)
     if h2 > maxColH then maxColH = h2 end
     x = x2
   end
@@ -279,6 +281,18 @@ function CIT.TreePanel.Render(model, slot, myModel, mySlot)
   local contentH = math.max(1, maxColH + 10)
   f.content:SetWidth(contentW)
   f.content:SetHeight(contentH)
+
+  -- Líneas de conexión: centros en coords BOTTOMLEFT (Y hacia arriba).
+  local centers = {}
+  for key, p in pairs(placed) do
+    centers[key] = { x = p.px + iconSize / 2, y = contentH + p.py - iconSize / 2, known = p.known }
+  end
+  local edges = {}
+  for _, e in ipairs(model.edges) do edges[#edges + 1] = { from = "t" .. e.from, to = "t" .. e.to } end
+  if myModel then
+    for _, e in ipairs(myModel.edges) do edges[#edges + 1] = { from = "m" .. e.from, to = "m" .. e.to } end
+  end
+  CIT.EdgeLines.Draw(f.content, edges, centers, 2, f.linePool)
 
   drawDividers(f, rects, maxColH)
 

@@ -201,6 +201,37 @@ function CIT.Debug.findMissing()
   end
 end
 
+-- Por cada tab, dumpea las combinaciones distintas de Type/NodeType/Quality/Color
+-- (con conteo) para identificar la categoría de los talentos hero y poder filtrarla.
+function CIT.Debug.dumpCats()
+  local api = _G.C_CharacterAdvancement
+  local u = "target"
+  local cn = CIT.CAReader.className(u)
+  if not cn then CIT.Log("debug: no class."); return end
+  local active = CIT.CAReader.inspectInfo(u) or 1
+  local tabs, seen = {}, {}
+  local ok, base = pcall(api.GetTalentsByClass, cn, active, false)
+  if ok and type(base) == "table" then
+    for _, e in ipairs(base) do
+      if e.Tab and not seen[e.Tab] then seen[e.Tab] = true; tabs[#tabs + 1] = e.Tab end
+    end
+  end
+  for _, tab in ipairs(tabs) do
+    local ok2, res = pcall(api.GetEntriesByClass, cn, tab, false)
+    if ok2 and type(res) == "table" then
+      local combo, ord = {}, {}
+      for _, e in ipairs(res) do
+        local k = tostring(e.Type) .. "|" .. tostring(e.NodeType)
+          .. "|" .. tostring(e.Quality) .. "|" .. tostring(e.Color)
+        if combo[k] == nil then combo[k] = 0; ord[#ord + 1] = k end
+        combo[k] = combo[k] + 1
+      end
+      CIT.Log(tab .. ":")
+      for _, k in ipairs(ord) do CIT.Log("   " .. k .. " = " .. combo[k]) end
+    end
+  end
+end
+
 -- /coait          -> resumen por tab
 -- /coait class    -> nodos del tab Class con posiciones
 -- /coait api      -> funciones de la API CoA
@@ -219,6 +250,8 @@ _G.SlashCmdList["COAIT"] = function(msg)
     CIT.safe(CIT.Debug.dumpEntries)
   elseif msg == "findmiss" then
     CIT.safe(CIT.Debug.findMissing)
+  elseif msg == "cats" then
+    CIT.safe(CIT.Debug.dumpCats)
   else
     CIT.safe(CIT.Debug.dumpTarget)
   end

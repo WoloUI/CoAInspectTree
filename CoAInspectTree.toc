@@ -11,5 +11,6 @@ Data\CAReader.lua
 Data\TreeModel.lua
 Core\Debug.lua
 UI\NodeButton.lua
+UI\EdgeLines.lua
 UI\TreePanel.lua
 UI\InspectHook.lua
