@@ -74,32 +74,29 @@ function CIT.TreeModel.bounds(model)
   return { maxX = overallMaxX, tabs = tabs }
 end
 
--- Devuelve la lista ordenada de tabs a mostrar: SIEMPRE "Class" primero (a la
--- izquierda), luego la(s) spec(s) que tengan al menos un talento aprendido (la
--- spec activa). Así se ocultan las otras specs. Si no hay ningún aprendido,
--- cae a mostrar todos los tabs en su orden original.
-function CIT.TreeModel.layoutTabs(model)
+-- Devuelve la lista ordenada de tabs a mostrar: "Class" primero (a la izquierda)
+-- y luego la spec activa. Los tabs siempre vienen en orden spec1, spec2, spec3,
+-- Class, así que la spec activa es el tab N-ésimo (no-Class) según `slot`. Esto
+-- no depende de qué talentos estén aprendidos, así que funciona aunque el build
+-- aún no haya cargado. Las demás specs quedan ocultas.
+function CIT.TreeModel.layoutTabs(model, slot)
   local CLASS = "Class"
-  local learned = {}
-  for _, node in pairs(model.nodes) do
-    if node.known then learned[node.tab] = true end
+  local specs = {}
+  local hasClass = false
+  for _, t in ipairs(model.tabs) do
+    if t == CLASS then hasClass = true else specs[#specs + 1] = t end
   end
 
   local ordered = {}
-  local hasClass = false
-  for _, t in ipairs(model.tabs) do if t == CLASS then hasClass = true end end
   if hasClass then table.insert(ordered, CLASS) end
-  local specAdded = false
-  for _, t in ipairs(model.tabs) do
-    if t ~= CLASS and learned[t] then
-      table.insert(ordered, t)
-      specAdded = true
-    end
+  if #specs > 0 then
+    local idx = slot or 1
+    if idx < 1 or idx > #specs then idx = 1 end
+    table.insert(ordered, specs[idx])
   end
 
-  -- Sin spec activa detectable: mostrar todos los tabs en su orden original.
-  if not specAdded then
-    ordered = {}
+  -- Sin tabs (caso degenerado): devolver lo que haya en orden original.
+  if #ordered == 0 then
     for _, t in ipairs(model.tabs) do table.insert(ordered, t) end
   end
   return ordered

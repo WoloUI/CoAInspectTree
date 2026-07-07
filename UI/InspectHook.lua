@@ -65,19 +65,20 @@ local function renderFor(unit, slot)
     for s = 1, unlocked do specs[#specs + 1] = s end
   end
   if #specs == 0 then specs = { slot } end
-  CIT.TreePanel.SetSpecs(specs, slot, function(s) renderFor(unit, s) end)
+  -- Usar current.unit en los closures para no capturar un target obsoleto.
+  CIT.TreePanel.SetSpecs(specs, slot, function(s) renderFor(current.unit, s) end)
 
   -- Botón Comparar: alterna mostrar tu propio árbol junto al del inspeccionado.
   CIT.TreePanel.SetCompare(current.compare, function()
     current.compare = not current.compare
-    renderFor(unit, current.slot or slot)
+    renderFor(current.unit, current.slot)
   end)
 
   -- Si Comparar está activo, construir tu propio modelo (tu clase + tu spec).
-  local myModel = nil
+  local myModel, mySlot = nil, nil
   if current.compare then
     local myClass = CIT.CAReader.className("player")
-    local mySlot = (CIT.CAReader.inspectInfo("player")) or 1
+    mySlot = (CIT.CAReader.inspectInfo("player")) or 1
     if myClass then
       local myTree = CIT.CAReader.classTree(myClass, mySlot)
       if #myTree > 0 then
@@ -87,7 +88,7 @@ local function renderFor(unit, slot)
     end
   end
 
-  CIT.TreePanel.Render(model, myModel)
+  CIT.TreePanel.Render(model, slot, myModel, mySlot)
   CIT.TreePanel.Show()
 end
 CIT.InspectHook.RenderFor = renderFor

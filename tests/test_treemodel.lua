@@ -56,26 +56,27 @@ T.eq(CIT.TreeModel.fitScale(7, 44, 210), 30, "fitScale reduce para caber")
 T.eq(CIT.TreeModel.fitScale(7, 44, 70, 20), 20, "fitScale respeta minCell")
 T.eq(CIT.TreeModel.fitScale(0, 44, 308), 44, "fitScale con 0 cols devuelve baseCell")
 
--- layoutTabs: solo Class (primero) + la spec activa (tab con aprendidos).
-local order = CIT.TreeModel.layoutTabs(model)
+-- layoutTabs: Class (primero) + la spec activa según el slot (tab N-ésimo).
+local order = CIT.TreeModel.layoutTabs(model, 1)
 T.eq(#order, 2, "layoutTabs devuelve Class + spec activa")
 T.eq(order[1], "Class", "Class va primero (izquierda)")
-T.eq(order[2], "Protection", "spec activa (con aprendidos) va después")
+T.eq(order[2], "Protection", "spec activa (slot 1 -> primer spec tab)")
 
--- Sin nodos aprendidos: fallback a todos los tabs en orden original.
-local empty = CIT.TreeModel.build(fx.tree, {})
-local ord2 = CIT.TreeModel.layoutTabs(empty)
-T.eq(#ord2, 2, "fallback: muestra todos los tabs si no hay aprendidos")
-T.eq(ord2[1], "Protection", "fallback conserva orden de aparición")
-
--- Un tab de spec SIN aprendidos se excluye si otra spec sí tiene.
+-- La spec se elige por slot: spec2 y spec3 son otros tabs.
 local m3 = CIT.TreeModel.build({
-  { ID=1, Name="a", Tab="Class",  PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
-  { ID=2, Name="b", Tab="Fire",   PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
-  { ID=3, Name="c", Tab="Frost",  PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
-}, { [2] = { rank=1, maxRank=1 } })
-local ord3 = CIT.TreeModel.layoutTabs(m3)
-T.eq(#ord3, 2, "excluye specs sin aprendidos")
-T.eq(ord3[1], "Class", "Class primero")
-T.eq(ord3[2], "Fire", "solo la spec con aprendidos (Fire), no Frost")
+  { ID=1, Name="a", Tab="Fire",   PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
+  { ID=2, Name="b", Tab="Frost",  PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
+  { ID=3, Name="c", Tab="Arcane", PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
+  { ID=4, Name="d", Tab="Class",  PositionX=0, PositionY=0, ConnectedNodes={}, RequiredIDs={} },
+}, {})
+local o1 = CIT.TreeModel.layoutTabs(m3, 1)
+T.eq(o1[1], "Class", "Class primero")
+T.eq(o1[2], "Fire", "slot 1 -> primer spec (Fire)")
+local o2 = CIT.TreeModel.layoutTabs(m3, 2)
+T.eq(o2[2], "Frost", "slot 2 -> segundo spec (Frost)")
+local o3 = CIT.TreeModel.layoutTabs(m3, 3)
+T.eq(o3[2], "Arcane", "slot 3 -> tercer spec (Arcane)")
+-- slot fuera de rango cae al primer spec.
+local o9 = CIT.TreeModel.layoutTabs(m3, 9)
+T.eq(o9[2], "Fire", "slot fuera de rango -> primer spec")
 return T.done()

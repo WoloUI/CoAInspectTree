@@ -153,9 +153,9 @@ local function acquireHeader(f, i)
   return h
 end
 
--- Suma de columnas visibles (para elegir escala) y nº de tabs mostrados.
-local function shownCols(model)
-  local order = CIT.TreeModel.layoutTabs(model)
+-- Suma de columnas visibles (para elegir escala) y nº de tabs mostrados,
+-- dado el `order` (lista de tabs) ya calculado.
+local function shownCols(model, order)
   local bounds = CIT.TreeModel.bounds(model)
   local byName = {}
   for _, ti in ipairs(bounds.tabs) do byName[ti.name] = ti end
@@ -167,11 +167,11 @@ local function shownCols(model)
   return cols, tabs
 end
 
--- Coloca las columnas de un modelo desde startX, con prefijo de clave (para no
--- colisionar IDs entre árboles) y prefijo de header (p.ej. "TÚ · "). Devuelve
+-- Coloca las columnas de un modelo (según `order`) desde startX. Usa prefijo de
+-- clave (para no colisionar IDs entre árboles) y prefijo de header ("YOU · ").
+-- Agrega los rects {x,w} de cada columna a `rects`. Devuelve
 -- (nuevoX, maxColH, btnIndex, headerIndex).
-local function renderColumns(f, model, keyPrefix, headerPrefix, startX, cell, iconSize, btnIndex, headerIndex)
-  local order = CIT.TreeModel.layoutTabs(model)
+local function renderColumns(f, model, order, keyPrefix, headerPrefix, startX, cell, iconSize, btnIndex, headerIndex, rects)
   local bounds = CIT.TreeModel.bounds(model)
   local byName = {}
   for _, ti in ipairs(bounds.tabs) do byName[ti.name] = ti end
@@ -206,27 +206,53 @@ local function renderColumns(f, model, keyPrefix, headerPrefix, startX, cell, ic
       local colW = (tabInfo.maxX - tabInfo.minX + 1) * cell
       local colH = TAB_HEADER + (tabInfo.maxY - tabInfo.minY + 1) * cell
       if colH > maxColH then maxColH = colH end
+      rects[#rects + 1] = { x = xOffset, w = colW }
       xOffset = xOffset + colW + TAB_COL_GAP
     end
   end
   return xOffset, maxColH, btnIndex, headerIndex
 end
 
--- Renderiza el árbol del inspeccionado y, si `myModel` viene dado, tu propio
--- árbol a la derecha (separado por un divisor y con headers "TÚ · ...").
-function CIT.TreePanel.Render(model, myModel)
+-- Dibuja divisores verticales en el hueco entre cada par de columnas contiguas.
+local function drawDividers(f, rects, height)
+  f.dividers = f.dividers or {}
+  for i = 1, #f.dividers do f.dividers[i]:Hide() end
+  for i = 1, #rects - 1 do
+    local rightEdge = rects[i].x + rects[i].w
+    local nextStart = rects[i + 1].x
+    local mid = (rightEdge + nextStart) / 2
+    local d = f.dividers[i]
+    if not d then
+      d = f.content:CreateTexture(nil, "BACKGROUND")
+      f.dividers[i] = d
+    end
+    d:SetTexture(0.28, 0.28, 0.34, 0.7)
+    d:ClearAllPoints()
+    d:SetPoint("TOPLEFT", f.content, "TOPLEFT", mid - 1, 0)
+    d:SetWidth(2)
+    d:SetHeight(height)
+    d:Show()
+  end
+end
+
+-- Renderiza el árbol del inspeccionado (Class + spec del `slot`) y, si `myModel`
+-- viene dado, tu propio árbol a la derecha (headers "YOU · ..."). Dibuja un
+-- divisor entre cada par de columnas contiguas.
+function CIT.TreePanel.Render(model, slot, myModel, mySlot)
   local f = CIT.TreePanel.Get()
   for i = 1, #f.buttons do f.buttons[i]:Hide() end
   if f.headers then for i = 1, #f.headers do f.headers[i]:Hide() end end
-  if f.divider then f.divider:Hide() end
   f.buttonsById = {}
 
   local sw = (UIParent and UIParent.GetWidth and UIParent:GetWidth()) or 1024
   local sh = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
 
-  local cols1, tabs1 = shownCols(model)
+  local order1 = CIT.TreeModel.layoutTabs(model, slot)
+  local order2 = myModel and CIT.TreeModel.layoutTabs(myModel, mySlot) or nil
+
+  local cols1, tabs1 = shownCols(model, order1)
   local cols2, tabs2 = 0, 0
-  if myModel then cols2, tabs2 = shownCols(myModel) end
+  if myModel then cols2, tabs2 = shownCols(myModel, order2) end
   local totalCols = cols1 + cols2
   local totalTabs = tabs1 + tabs2
 
@@ -237,30 +263,24 @@ function CIT.TreePanel.Render(model, myModel)
   local cell = CIT.TreeModel.fitScale(totalCols, BASE_CELL, maxContentW, MIN_CELL)
   local iconSize = math.max(14, cell - 8)
 
-  local x, maxColH, btnIndex, headerIndex = renderColumns(f, model, "t", "", 0, cell, iconSize, 0, 0)
+  local rects = {}
+  local x, maxColH, btnIndex, headerIndex = renderColumns(f, model, order1, "t", "", 0, cell, iconSize, 0, 0, rects)
 
   if myModel then
     -- x trae un TAB_COL_GAP de más al final; convertirlo en el hueco de sección.
-    local dividerX = x - TAB_COL_GAP + math.floor(SECTION_GAP / 2)
     local myStartX = x - TAB_COL_GAP + SECTION_GAP
     local x2, h2
-    x2, h2, btnIndex, headerIndex = renderColumns(f, myModel, "m", "YOU · ", myStartX, cell, iconSize, btnIndex, headerIndex)
+    x2, h2, btnIndex, headerIndex = renderColumns(f, myModel, order2, "m", "YOU · ", myStartX, cell, iconSize, btnIndex, headerIndex, rects)
     if h2 > maxColH then maxColH = h2 end
     x = x2
-
-    f.divider = f.divider or f.content:CreateTexture(nil, "BACKGROUND")
-    f.divider:SetTexture(0.30, 0.30, 0.36, 0.85)
-    f.divider:ClearAllPoints()
-    f.divider:SetPoint("TOPLEFT", f.content, "TOPLEFT", dividerX, 0)
-    f.divider:SetWidth(2)
-    f.divider:SetHeight(maxColH)
-    f.divider:Show()
   end
 
   local contentW = math.max(1, x - TAB_COL_GAP)
   local contentH = math.max(1, maxColH + 10)
   f.content:SetWidth(contentW)
   f.content:SetHeight(contentH)
+
+  drawDividers(f, rects, maxColH)
 
   local headerTotal = TITLE_H + SPEC_H
   local maxPanelInner = math.floor(sh * 0.9) - headerTotal - PAD

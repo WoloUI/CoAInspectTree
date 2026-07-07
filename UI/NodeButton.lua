@@ -57,9 +57,10 @@ function CIT.NodeButton.Style(button, node)
     button.border:SetAlpha(1)
     button.border:Show()
   else
+    -- No aprendido: atenuado pero visible, para ver el árbol completo.
     button.icon:SetDesaturated(true)
-    button.icon:SetVertexColor(0.6, 0.6, 0.6)
-    button.icon:SetAlpha(0.35)
+    button.icon:SetVertexColor(0.85, 0.85, 0.85)
+    button.icon:SetAlpha(0.6)
     button.border:Hide()
   end
 
