@@ -17,27 +17,57 @@ function R.className(unit)
 end
 
 -- Árbol completo de la clase (lista de nodos crudos). {} si falla.
--- GetTalentsByClass con withMasteries=true y =false devuelven conjuntos distintos
--- (cada modo omite algunos nodos que el otro sí trae). Confirmado in-game: solo
--- la UNIÓN de ambos cubre todos los talentos aprendidos. Mergeamos deduplicando
--- por ID.
+-- GetTalentsByClass solo devuelve las entries de tipo "Talent", omitiendo los
+-- nodos-habilidad de la grilla (confirmado in-game: quedaban ~12 aprendidos sin
+-- nodo). GetEntriesByClass(className, tabName, false) trae TODAS las entries de
+-- un tab (talentos + habilidades) con posición. Descubrimos los nombres de tabs
+-- con GetTalentsByClass y luego pedimos cada tab completo. Fallback: merge de
+-- GetTalentsByClass si GetEntriesByClass no existe.
 function R.classTree(className, slot)
   local api = CA()
-  if not (api and type(api.GetTalentsByClass) == "function" and className) then return {} end
-  local seen, out = {}, {}
-  local function absorb(withMasteries)
-    local ok, entries = pcall(api.GetTalentsByClass, className, slot, withMasteries)
+  if not (api and className) then return {} end
+
+  -- 1) Nombres de tabs (specs + Class) desde GetTalentsByClass.
+  local tabs, seenTab = {}, {}
+  if type(api.GetTalentsByClass) == "function" then
+    local ok, entries = pcall(api.GetTalentsByClass, className, slot, false)
     if ok and type(entries) == "table" then
       for _, e in ipairs(entries) do
-        if e.ID and not seen[e.ID] then
-          seen[e.ID] = true
-          out[#out + 1] = e
+        if e.Tab and not seenTab[e.Tab] then
+          seenTab[e.Tab] = true
+          tabs[#tabs + 1] = e.Tab
         end
       end
     end
   end
-  absorb(false)
-  absorb(true)
+
+  local seen, out = {}, {}
+  local function absorb(entries)
+    if type(entries) ~= "table" then return end
+    for _, e in ipairs(entries) do
+      if e.ID and not seen[e.ID] then
+        seen[e.ID] = true
+        out[#out + 1] = e
+      end
+    end
+  end
+
+  -- 2) Todas las entries por tab (grilla completa).
+  if type(api.GetEntriesByClass) == "function" and #tabs > 0 then
+    for _, tab in ipairs(tabs) do
+      local ok, entries = pcall(api.GetEntriesByClass, className, tab, false)
+      if ok then absorb(entries) end
+    end
+  end
+
+  -- 3) Fallback: merge de GetTalentsByClass (ambos modos) si lo anterior no dio.
+  if #out == 0 and type(api.GetTalentsByClass) == "function" then
+    for _, withMasteries in ipairs({ false, true }) do
+      local ok, entries = pcall(api.GetTalentsByClass, className, slot, withMasteries)
+      if ok then absorb(entries) end
+    end
+  end
+
   return out
 end
 

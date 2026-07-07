@@ -78,7 +78,24 @@ end
 local merged = R.classTree("Guardian", 2)
 T.eq(#merged, 3, "classTree une ambos modos sin duplicar (A,B,C)")
 
+-- Camino primario: classTree usa GetEntriesByClass por tab (todas las entries,
+-- no solo talentos). GetTalentsByClass solo aporta los nombres de tab.
+_G.C_CharacterAdvancement.GetTalentsByClass = function(cn, slot, withM)
+  return { { ID = 1, Tab = "War" }, { ID = 2, Tab = "Class" } }
+end
+_G.C_CharacterAdvancement.GetEntriesByClass = function(cn, tab, withM)
+  if tab == "War" then
+    return { { ID = 1, Tab = "War" }, { ID = 10, Tab = "War" } }
+  elseif tab == "Class" then
+    return { { ID = 2, Tab = "Class" }, { ID = 20, Tab = "Class" }, { ID = 21, Tab = "Class" } }
+  end
+  return {}
+end
+local ct = R.classTree("KOX", 2)
+T.eq(#ct, 5, "classTree via GetEntriesByClass reúne todas las entries por tab")
+
 -- Robustez: si la API tira error, devuelve valores seguros.
 _G.C_CharacterAdvancement.GetTalentsByClass = function() error("boom") end
+_G.C_CharacterAdvancement.GetEntriesByClass = nil
 T.eq(#R.classTree("Guardian", 2), 0, "classTree devuelve {} si la API falla")
 return T.done()
