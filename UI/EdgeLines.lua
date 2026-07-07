@@ -26,6 +26,8 @@ local function drawLine(tex, fromBtn, toBtn)
 end
 
 -- Dibuja todas las aristas. linePool es una tabla reutilizable de texturas.
+-- Una arista entre dos nodos aprendidos se resalta (teal brillante); el resto
+-- queda en gris tenue.
 function CIT.EdgeLines.Draw(parent, edges, buttonsById, linePool)
   for i = 1, #linePool do linePool[i]:Hide() end
   for i, e in ipairs(edges) do
@@ -34,8 +36,13 @@ function CIT.EdgeLines.Draw(parent, edges, buttonsById, linePool)
       local tex = linePool[i]
       if not tex then
         tex = parent:CreateTexture(nil, "BACKGROUND")
-        tex:SetTexture(0.5, 0.5, 0.5, 0.6)  -- gris translúcido (RGBA sólido)
         linePool[i] = tex
+      end
+      local bothKnown = a.nodeData and b.nodeData and a.nodeData.known and b.nodeData.known
+      if bothKnown then
+        tex:SetTexture(0.25, 0.85, 0.80, 0.85)  -- teal brillante
+      else
+        tex:SetTexture(0.35, 0.35, 0.40, 0.5)   -- gris tenue
       end
       drawLine(tex, a, b)
     end

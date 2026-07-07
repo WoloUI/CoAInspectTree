@@ -36,4 +36,20 @@ end
 T.truthy(hasEdge(31319, 30056), "arista With Honor -> Iron Guardian")
 T.truthy(hasEdge(30056, 31169), "arista Iron Guardian -> Heavy Blow")
 T.eq(hasEdge(1719, 6712), false, "no crea arista a nodo inexistente")
+
+-- bounds: límites de grilla por Tab y overall (para auto-fit del panel).
+local b = CIT.TreeModel.bounds(model)
+T.eq(b.maxX, 6, "bounds.maxX overall")
+T.eq(#b.tabs, 2, "bounds tiene una entrada por Tab")
+T.eq(b.tabs[1].name, "Protection", "bounds tab[1] name")
+T.eq(b.tabs[1].maxX, 6, "bounds Protection maxX")
+T.eq(b.tabs[1].maxY, 4, "bounds Protection maxY")
+T.eq(b.tabs[2].name, "Class", "bounds tab[2] name")
+T.eq(b.tabs[2].maxY, 1, "bounds Class maxY")
+
+-- fitScale: elige el tamaño de celda para que quepa el ancho.
+T.eq(CIT.TreeModel.fitScale(7, 44, 308), 44, "fitScale no supera baseCell")
+T.eq(CIT.TreeModel.fitScale(7, 44, 210), 30, "fitScale reduce para caber")
+T.eq(CIT.TreeModel.fitScale(7, 44, 70, 20), 20, "fitScale respeta minCell")
+T.eq(CIT.TreeModel.fitScale(0, 44, 308), 44, "fitScale con 0 cols devuelve baseCell")
 return T.done()

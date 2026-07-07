@@ -53,7 +53,8 @@ local function renderFor(unit, slot)
     return
   end
   current.retries = 0
-  local buildMap = CIT.CAReader.unitBuild(unit, slot)
+  -- Marcado completo: consultar el rango de cada nodo del árbol directamente.
+  local buildMap = CIT.CAReader.buildFromTree(unit, slot, current.tree)
   local model = CIT.TreeModel.build(current.tree, buildMap)
   local inspectFrame = getInspectFrame()
   if inspectFrame then CIT.TreePanel.AttachTo(inspectFrame) end
@@ -67,7 +68,7 @@ CIT.InspectHook.RenderFor = renderFor
 local function restyleFor(slot)
   if not (current.unit and current.tree) then return end
   current.slot = slot
-  local buildMap = CIT.CAReader.unitBuild(current.unit, slot)
+  local buildMap = CIT.CAReader.buildFromTree(current.unit, slot, current.tree)
   local model = CIT.TreeModel.build(current.tree, buildMap)
   CIT.TreePanel.Get().title:SetText((UnitName(current.unit) or "") .. " — spec " .. tostring(slot))
   CIT.TreePanel.Render(model)

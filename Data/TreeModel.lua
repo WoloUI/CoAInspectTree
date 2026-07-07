@@ -48,3 +48,35 @@ function CIT.TreeModel.build(rawTree, buildMap)
 
   return model
 end
+
+-- Límites de la grilla por Tab (y overall), usados por TreePanel para
+-- dimensionar el panel al contenido real. Devuelve:
+--   { maxX = <max x global>, tabs = { { name, maxX, maxY }, ... } }
+-- en el orden de model.tabs.
+function CIT.TreeModel.bounds(model)
+  local overallMaxX = 0
+  local tabs = {}
+  for _, tabName in ipairs(model.tabs) do
+    local maxX, maxY = 0, 0
+    for _, node in pairs(model.nodes) do
+      if node.tab == tabName then
+        if (node.x or 0) > maxX then maxX = node.x end
+        if (node.y or 0) > maxY then maxY = node.y end
+      end
+    end
+    if maxX > overallMaxX then overallMaxX = maxX end
+    table.insert(tabs, { name = tabName, maxX = maxX, maxY = maxY })
+  end
+  return { maxX = overallMaxX, tabs = tabs }
+end
+
+-- Elige el tamaño de celda (px) para que `cols` columnas quepan en `maxWidth`,
+-- sin superar baseCell ni bajar de minCell.
+function CIT.TreeModel.fitScale(cols, baseCell, maxWidth, minCell)
+  minCell = minCell or 20
+  if not cols or cols <= 0 then return baseCell end
+  local cell = math.floor(maxWidth / cols)
+  if cell > baseCell then cell = baseCell end
+  if cell < minCell then cell = minCell end
+  return cell
+end
