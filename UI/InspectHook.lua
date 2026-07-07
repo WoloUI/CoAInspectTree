@@ -93,19 +93,32 @@ local function renderFor(unit, slot)
 end
 CIT.InspectHook.RenderFor = renderFor
 
--- Al llegar la data CoA del inspeccionado, renderizar su spec activa.
+-- Al llegar la data CoA del inspeccionado, renderizar su spec activa. Usamos
+-- siempre "target" (el inspeccionado en CoA es tu objetivo); inspectFrame.unit
+-- puede quedar obsoleto y mostrar al jugador anterior.
 CIT.RegisterEvent("INSPECT_CHARACTER_ADVANCEMENT_RESULT", function()
-  local unit = "target"
-  local inspectFrame = getInspectFrame()
-  if inspectFrame and inspectFrame.unit then unit = inspectFrame.unit end
-  local active = CIT.CAReader.inspectInfo(unit) or 1
-  renderFor(unit, active)
+  local active = CIT.CAReader.inspectInfo("target") or 1
+  renderFor("target", active)
 end)
 
--- Ocultar el panel cuando se cierra el inspect.
+-- Al cambiar de objetivo: descartar el árbol del inspeccionado anterior y, si
+-- hay inspect abierto sobre un jugador, pedir/renderizar los datos del nuevo.
 CIT.RegisterEvent("PLAYER_TARGET_CHANGED", function()
+  if not CIT.enabled then return end
+  current.unit = nil; current.className = nil; current.tree = nil
+  current.slot = nil; current.retries = 0
   local f = getInspectFrame()
-  if not f then CIT.TreePanel.Hide() end
+  if not f then CIT.TreePanel.Hide(); return end
+  if UnitExists("target") and UnitIsPlayer("target") then
+    local api = _G.C_CharacterAdvancement
+    if api and type(api.InspectUnit) == "function" then
+      CIT.safe(api.InspectUnit, "target")
+    end
+    local active = CIT.CAReader.inspectInfo("target") or 1
+    renderFor("target", active)
+  else
+    CIT.TreePanel.Hide()
+  end
 end)
 
 -- Muestra el panel solo cuando la pestaña Build del inspect está activa.
