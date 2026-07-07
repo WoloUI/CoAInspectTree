@@ -139,11 +139,36 @@ function CIT.Debug.dumpEntries()
     analyze(label, res)
   end
 
-  tryFn("GetTalentsByClass(cn,slot,false)", api.GetTalentsByClass, cn, active, false)
-  tryFn("GetEntriesByClass(cn)", api.GetEntriesByClass, cn)
-  tryFn("GetEntriesByClass(cn,slot)", api.GetEntriesByClass, cn, active)
-  tryFn("GetAllEntries()", api.GetAllEntries)
-  tryFn("GetKnownTalentEntriesForClass(cn)", api.GetKnownTalentEntriesForClass, cn)
+  -- Nombres de tabs desde GetTalentsByClass.
+  local tabs, seen = {}, {}
+  local ok0, base = pcall(api.GetTalentsByClass, cn, active, false)
+  if ok0 and type(base) == "table" then
+    for _, e in ipairs(base) do
+      if e.Tab and not seen[e.Tab] then seen[e.Tab] = true; tabs[#tabs + 1] = e.Tab end
+    end
+  end
+
+  -- GetEntriesByClass(className, tabName, withMasteries) por tab: ¿trae TODAS
+  -- las entries (incl. las no-talento) con posición, cubriendo los faltantes?
+  CIT.Log("GetEntriesByClass por tab (faltan " .. missN .. "):")
+  local totalFound = 0
+  for _, tab in ipairs(tabs) do
+    local ok, res = pcall(api.GetEntriesByClass, cn, tab, false)
+    if ok and type(res) == "table" then
+      local n, found, hasPos = 0, 0, false
+      for _, e in ipairs(res) do
+        n = n + 1
+        if e.ID and miss[e.ID] then found = found + 1 end
+        if e.PositionX ~= nil then hasPos = true end
+      end
+      totalFound = totalFound + found
+      CIT.Log("  " .. tab .. " -> " .. n .. " entries, faltantes_aqui=" .. found
+        .. ", hasPos=" .. tostring(hasPos))
+    else
+      CIT.Log("  " .. tab .. " error: " .. tostring(res))
+    end
+  end
+  CIT.Log("total faltantes cubiertos por GetEntriesByClass: " .. totalFound .. "/" .. missN)
 end
 
 -- Para cada aprendido que NO está en el árbol, busca su Tab/Class en el dump
