@@ -138,13 +138,21 @@ function CIT.TreePanel.Render(model)
   f.buttonsById = {}
 
   local bounds = CIT.TreeModel.bounds(model)
+  local byName = {}
+  for _, ti in ipairs(bounds.tabs) do byName[ti.name] = ti end
 
-  -- Escala: que la suma de columnas de todos los tabs quepa en ~55% del ancho.
+  -- Tabs a mostrar: Class (izquierda) + spec activa (derecha).
+  local order = CIT.TreeModel.layoutTabs(model)
+
+  -- Escala: que la suma de columnas de los tabs mostrados quepa en ~55% ancho.
   local totalCols = 0
-  for _, tabInfo in ipairs(bounds.tabs) do totalCols = totalCols + (tabInfo.maxX + 1) end
+  for _, name in ipairs(order) do
+    local ti = byName[name]
+    if ti then totalCols = totalCols + (ti.maxX + 1) end
+  end
   local sw = (UIParent and UIParent.GetWidth and UIParent:GetWidth()) or 1024
   local sh = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
-  local nGaps = math.max(0, #bounds.tabs - 1)
+  local nGaps = math.max(0, #order - 1)
   local maxContentW = math.floor(sw * 0.55) - nGaps * TAB_COL_GAP
   local cell = CIT.TreeModel.fitScale(totalCols, BASE_CELL, maxContentW, MIN_CELL)
   local iconSize = math.max(14, cell - 8)
@@ -153,8 +161,9 @@ function CIT.TreePanel.Render(model)
   local xOffset = 0
   local maxColH = 0
 
-  for _, tabInfo in ipairs(bounds.tabs) do
-    local tabName = tabInfo.name
+  for _, tabName in ipairs(order) do
+    local tabInfo = byName[tabName]
+    if tabInfo then
     headerIndex = headerIndex + 1
     local header = acquireHeader(f, headerIndex)
     header:ClearAllPoints()
@@ -180,6 +189,7 @@ function CIT.TreePanel.Render(model)
     local colH = TAB_HEADER + (tabInfo.maxY + 1) * cell
     if colH > maxColH then maxColH = colH end
     xOffset = xOffset + colW + TAB_COL_GAP
+    end
   end
 
   local contentW = math.max(1, xOffset - TAB_COL_GAP)

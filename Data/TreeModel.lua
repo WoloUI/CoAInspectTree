@@ -70,6 +70,37 @@ function CIT.TreeModel.bounds(model)
   return { maxX = overallMaxX, tabs = tabs }
 end
 
+-- Devuelve la lista ordenada de tabs a mostrar: SIEMPRE "Class" primero (a la
+-- izquierda), luego la(s) spec(s) que tengan al menos un talento aprendido (la
+-- spec activa). Así se ocultan las otras specs. Si no hay ningún aprendido,
+-- cae a mostrar todos los tabs en su orden original.
+function CIT.TreeModel.layoutTabs(model)
+  local CLASS = "Class"
+  local learned = {}
+  for _, node in pairs(model.nodes) do
+    if node.known then learned[node.tab] = true end
+  end
+
+  local ordered = {}
+  local hasClass = false
+  for _, t in ipairs(model.tabs) do if t == CLASS then hasClass = true end end
+  if hasClass then table.insert(ordered, CLASS) end
+  local specAdded = false
+  for _, t in ipairs(model.tabs) do
+    if t ~= CLASS and learned[t] then
+      table.insert(ordered, t)
+      specAdded = true
+    end
+  end
+
+  -- Sin spec activa detectable: mostrar todos los tabs en su orden original.
+  if not specAdded then
+    ordered = {}
+    for _, t in ipairs(model.tabs) do table.insert(ordered, t) end
+  end
+  return ordered
+end
+
 -- Elige el tamaño de celda (px) para que `cols` columnas quepan en `maxWidth`,
 -- sin superar baseCell ni bajar de minCell.
 function CIT.TreeModel.fitScale(cols, baseCell, maxWidth, minCell)
