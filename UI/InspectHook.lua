@@ -32,9 +32,27 @@ local function renderFor(unit, slot)
   current.slot = slot
   current.tree = CIT.CAReader.classTree(className, slot)
   if #current.tree == 0 then
-    CIT.TreePanel.Get().title:SetText("Sin datos de talentos")
+    current.retries = (current.retries or 0) + 1
+    CIT.TreePanel.Get().title:SetText("Cargando talentos...")
+    CIT.TreePanel.Show()
+    if current.retries <= 5 then
+      local u, s = unit, slot
+      -- C_Timer no existe en 3.3.5; usar un frame OnUpdate de un disparo.
+      local t = CreateFrame("Frame")
+      local waited = 0
+      t:SetScript("OnUpdate", function(self, e)
+        waited = waited + e
+        if waited >= 0.5 then
+          self:SetScript("OnUpdate", nil)
+          renderFor(u, s)
+        end
+      end)
+    else
+      CIT.TreePanel.Get().title:SetText("Sin datos de talentos")
+    end
     return
   end
+  current.retries = 0
   local buildMap = CIT.CAReader.unitBuild(unit, slot)
   local model = CIT.TreeModel.build(current.tree, buildMap)
   local inspectFrame = getInspectFrame()
@@ -87,4 +105,29 @@ end
 
 CIT.RegisterEvent("INSPECT_CHARACTER_ADVANCEMENT_RESULT", function()
   CIT.safe(hookSpecButtons)
+end)
+
+-- Muestra el panel solo cuando la pestaña Build del inspect está activa.
+-- RECONOCIMIENTO PENDIENTE: rellenar `isBuildTabActive` con la comprobación
+-- real del selectedTab del frame nativo (ver Task 9 Step 1). Mientras no se
+-- determine, se asume visible cuando hay un inspect en curso.
+local buildTabWatcher = CreateFrame("Frame")
+local accum = 0
+buildTabWatcher:SetScript("OnUpdate", function(_, elapsed)
+  if not CIT.enabled then return end
+  accum = accum + elapsed
+  if accum < 0.2 then return end
+  accum = 0
+  local f = getInspectFrame()
+  if not f then CIT.TreePanel.Hide(); return end
+  local function isBuildTabActive()
+    -- Placeholder de detección: si no se pudo determinar la pestaña, asumir
+    -- visible. Reemplazar por la comprobación real del selectedTab del frame.
+    return true
+  end
+  if current.unit and isBuildTabActive() then
+    CIT.TreePanel.Show()
+  else
+    CIT.TreePanel.Hide()
+  end
 end)
