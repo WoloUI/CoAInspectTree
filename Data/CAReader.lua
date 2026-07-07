@@ -48,6 +48,32 @@ function R.unitBuild(unit, slot)
   return out
 end
 
+-- Build del PROPIO personaje ("player") para comparar. Intenta GetInspectedBuild
+-- primero; si viene vacío (puede no aplicar a uno mismo), cae a consultar el
+-- rango real de cada nodo con UnitTalentRankByID("player", ...), que sí devuelve
+-- rango para el jugador local. Devuelve { [id] = { rank, maxRank } }.
+function R.playerBuild(slot, rawTree)
+  local viaInspect = R.unitBuild("player", slot)
+  local n = 0
+  for _ in pairs(viaInspect) do n = n + 1 end
+  if n > 0 then return viaInspect end
+
+  local api = CA()
+  local out = {}
+  if api and type(api.UnitTalentRankByID) == "function" and type(rawTree) == "table" then
+    for _, node in ipairs(rawTree) do
+      local id = node.ID
+      if id then
+        local ok, rank, maxRank = pcall(api.UnitTalentRankByID, "player", id, slot)
+        if ok and type(rank) == "number" and rank > 0 then
+          out[id] = { rank = rank, maxRank = maxRank }
+        end
+      end
+    end
+  end
+  return out
+end
+
 -- (activeSpec, unlockedSpecs) del unit inspeccionado.
 function R.inspectInfo(unit)
   local api = CA()

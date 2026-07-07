@@ -52,6 +52,21 @@ T.eq(#unlocked, 2, "inspectInfo unlockedSpecs")
 local b1 = R.unitBuild("target", 1)
 T.eq(b1[31319].rank, 1, "unitBuild slot1 conserva Rank de GetInspectedBuild")
 
+-- playerBuild: usa GetInspectedBuild si trae datos (para tu propio personaje).
+local pb = R.playerBuild(2, { { ID = 31319 }, { ID = 30056 } })
+T.eq(pb[31319].rank, 1, "playerBuild via GetInspectedBuild")
+T.eq(pb[30056].rank, 2, "playerBuild rank de 30056")
+
+-- ...y cae a UnitTalentRankByID(player) si GetInspectedBuild viene vacío.
+_G.C_CharacterAdvancement.GetInspectedBuild = function() return {} end
+_G.C_CharacterAdvancement.UnitTalentRankByID = function(u, id, slot)
+  if id == 31319 then return 2, 4 end
+  return 0, 1
+end
+local pb2 = R.playerBuild(2, { { ID = 31319 }, { ID = 30056 } })
+T.eq(pb2[31319].rank, 2, "playerBuild fallback usa rank real del player")
+T.eq(pb2[30056], nil, "playerBuild fallback excluye rank 0")
+
 -- Robustez: si la API tira error, devuelve valores seguros.
 _G.C_CharacterAdvancement.GetTalentsByClass = function() error("boom") end
 T.eq(#R.classTree("Guardian", 2), 0, "classTree devuelve {} si la API falla")
