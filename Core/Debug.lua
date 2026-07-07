@@ -94,6 +94,58 @@ function CIT.Debug.dumpMissing()
   end
 end
 
+-- Prueba funciones alternativas de la API para hallar el árbol de clase real:
+-- reporta, por cada una, cuántas entries trae, el desglose por Tab, y cuántos de
+-- los EntryId aprendidos "faltantes" aparecen (para confirmar la fuente correcta).
+function CIT.Debug.dumpEntries()
+  local api = _G.C_CharacterAdvancement
+  local u = "target"
+  local cn = CIT.CAReader.className(u)
+  if not cn then CIT.Log("debug: no class."); return end
+  local active = CIT.CAReader.inspectInfo(u) or 1
+
+  -- Conjunto de aprendidos que faltan en GetTalentsByClass (referencia).
+  local tree = CIT.CAReader.classTree(cn, active)
+  local inTree = {}
+  for _, n in ipairs(tree) do inTree[n.ID] = true end
+  local build = CIT.CAReader.unitBuild(u, active)
+  local miss, missN = {}, 0
+  for id in pairs(build) do if not inTree[id] then miss[id] = true; missN = missN + 1 end end
+
+  local function analyze(label, res)
+    if type(res) ~= "table" then CIT.Log(label .. " -> " .. type(res)); return end
+    local n, total, ord, found = 0, {}, {}, 0
+    for _, e in ipairs(res) do
+      n = n + 1
+      local tb = e.Tab or "?"
+      if total[tb] == nil then total[tb] = 0; ord[#ord + 1] = tb end
+      total[tb] = total[tb] + 1
+      if e.ID and miss[e.ID] then found = found + 1 end
+    end
+    CIT.Log(label .. " -> " .. n .. " entries; faltantes: " .. found .. "/" .. missN)
+    local line = ""
+    for _, tb in ipairs(ord) do
+      local seg = tb .. "=" .. total[tb]
+      if #line + #seg + 2 > 90 then CIT.Log("   " .. line); line = "" end
+      line = (line == "") and seg or (line .. ", " .. seg)
+    end
+    if line ~= "" then CIT.Log("   " .. line) end
+  end
+
+  local function tryFn(label, fn, ...)
+    if type(fn) ~= "function" then CIT.Log(label .. " = nil"); return end
+    local ok, res = pcall(fn, ...)
+    if not ok then CIT.Log(label .. " error: " .. tostring(res)); return end
+    analyze(label, res)
+  end
+
+  tryFn("GetTalentsByClass(cn,slot,false)", api.GetTalentsByClass, cn, active, false)
+  tryFn("GetEntriesByClass(cn)", api.GetEntriesByClass, cn)
+  tryFn("GetEntriesByClass(cn,slot)", api.GetEntriesByClass, cn, active)
+  tryFn("GetAllEntries()", api.GetAllEntries)
+  tryFn("GetKnownTalentEntriesForClass(cn)", api.GetKnownTalentEntriesForClass, cn)
+end
+
 -- /coait          -> resumen por tab
 -- /coait class    -> nodos del tab Class con posiciones
 -- /coait api      -> funciones de la API CoA
@@ -108,6 +160,8 @@ _G.SlashCmdList["COAIT"] = function(msg)
     CIT.safe(CIT.Debug.dumpAPI)
   elseif msg == "miss" then
     CIT.safe(CIT.Debug.dumpMissing)
+  elseif msg == "entries" then
+    CIT.safe(CIT.Debug.dumpEntries)
   else
     CIT.safe(CIT.Debug.dumpTarget)
   end
