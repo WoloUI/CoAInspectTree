@@ -146,6 +146,36 @@ function CIT.Debug.dumpEntries()
   tryFn("GetKnownTalentEntriesForClass(cn)", api.GetKnownTalentEntriesForClass, cn)
 end
 
+-- Para cada aprendido que NO está en el árbol, busca su Tab/Class en el dump
+-- global y si es talento o mastery. Revela de dónde salen los nodos que faltan.
+function CIT.Debug.findMissing()
+  local u = "target"
+  local cn = CIT.CAReader.className(u)
+  if not cn then CIT.Log("debug: no class."); return end
+  local active = CIT.CAReader.inspectInfo(u) or 1
+  local tree = CIT.CAReader.classTree(cn, active)
+  local inTree = {}
+  for _, n in ipairs(tree) do inTree[n.ID] = true end
+  local build = CIT.CAReader.unitBuild(u, active)
+  local miss = {}
+  for id in pairs(build) do if not inTree[id] then miss[id] = true end end
+
+  local api = _G.C_CharacterAdvancement
+  local info = {}
+  local all = api.GetAllEntries and api.GetAllEntries()
+  if type(all) == "table" then
+    for _, e in ipairs(all) do
+      if e.ID and miss[e.ID] then info[e.ID] = (tostring(e.Class) .. "/" .. tostring(e.Tab)) end
+    end
+  end
+  for id in pairs(miss) do
+    local isTal = api.IsTalentID and api.IsTalentID(id)
+    local isMas = api.IsMastery and api.IsMastery(id)
+    CIT.Log(id .. " " .. (info[id] or "notfound")
+      .. " talent=" .. tostring(isTal) .. " mastery=" .. tostring(isMas))
+  end
+end
+
 -- /coait          -> resumen por tab
 -- /coait class    -> nodos del tab Class con posiciones
 -- /coait api      -> funciones de la API CoA
@@ -162,6 +192,8 @@ _G.SlashCmdList["COAIT"] = function(msg)
     CIT.safe(CIT.Debug.dumpMissing)
   elseif msg == "entries" then
     CIT.safe(CIT.Debug.dumpEntries)
+  elseif msg == "findmiss" then
+    CIT.safe(CIT.Debug.findMissing)
   else
     CIT.safe(CIT.Debug.dumpTarget)
   end
