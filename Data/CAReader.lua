@@ -17,15 +17,28 @@ function R.className(unit)
 end
 
 -- Árbol completo de la clase (lista de nodos crudos). {} si falla.
--- withMasteries=false devuelve el árbol COMPLETO (incluye los talentos de clase
--- que el modo true omite); confirmado in-game: con true faltaban ~12-14
--- aprendidos, con false faltan 0.
+-- GetTalentsByClass con withMasteries=true y =false devuelven conjuntos distintos
+-- (cada modo omite algunos nodos que el otro sí trae). Confirmado in-game: solo
+-- la UNIÓN de ambos cubre todos los talentos aprendidos. Mergeamos deduplicando
+-- por ID.
 function R.classTree(className, slot)
   local api = CA()
   if not (api and type(api.GetTalentsByClass) == "function" and className) then return {} end
-  local ok, entries = pcall(api.GetTalentsByClass, className, slot, false)
-  if ok and type(entries) == "table" then return entries end
-  return {}
+  local seen, out = {}, {}
+  local function absorb(withMasteries)
+    local ok, entries = pcall(api.GetTalentsByClass, className, slot, withMasteries)
+    if ok and type(entries) == "table" then
+      for _, e in ipairs(entries) do
+        if e.ID and not seen[e.ID] then
+          seen[e.ID] = true
+          out[#out + 1] = e
+        end
+      end
+    end
+  end
+  absorb(false)
+  absorb(true)
+  return out
 end
 
 -- Build aprendida del unit en esa spec: { [EntryId] = { rank, maxRank } }.

@@ -67,6 +67,17 @@ local pb2 = R.playerBuild(2, { { ID = 31319 }, { ID = 30056 } })
 T.eq(pb2[31319].rank, 2, "playerBuild fallback usa rank real del player")
 T.eq(pb2[30056], nil, "playerBuild fallback excluye rank 0")
 
+-- classTree une withMasteries=false y =true (cada modo omite nodos distintos).
+_G.C_CharacterAdvancement.GetTalentsByClass = function(cn, slot, withM)
+  if withM then
+    return { { ID = 30056, Name = "B" }, { ID = 999, Name = "C" } }
+  else
+    return { { ID = 31319, Name = "A" }, { ID = 30056, Name = "B" } }
+  end
+end
+local merged = R.classTree("Guardian", 2)
+T.eq(#merged, 3, "classTree une ambos modos sin duplicar (A,B,C)")
+
 -- Robustez: si la API tira error, devuelve valores seguros.
 _G.C_CharacterAdvancement.GetTalentsByClass = function() error("boom") end
 T.eq(#R.classTree("Guardian", 2), 0, "classTree devuelve {} si la API falla")
