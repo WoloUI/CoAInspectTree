@@ -282,10 +282,10 @@ function CIT.TreePanel.Render(model, slot, myModel, mySlot)
   f.content:SetWidth(contentW)
   f.content:SetHeight(contentH)
 
-  -- Líneas de conexión: centros en coords BOTTOMLEFT (Y hacia arriba).
+  -- Líneas de conexión: centros en coords TOPLEFT (Y negativa hacia abajo).
   local centers = {}
   for key, p in pairs(placed) do
-    centers[key] = { x = p.px + iconSize / 2, y = contentH + p.py - iconSize / 2, known = p.known }
+    centers[key] = { x = p.px + iconSize / 2, y = p.py - iconSize / 2, known = p.known }
   end
   local edges = {}
   for _, e in ipairs(model.edges) do edges[#edges + 1] = { from = "t" .. e.from, to = "t" .. e.to } end

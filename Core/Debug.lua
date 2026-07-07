@@ -232,6 +232,50 @@ function CIT.Debug.dumpCats()
   end
 end
 
+-- Dumpea info de specs/categorías para distinguir la spec activa de los árboles
+-- hero (que comparten formato de entry pero son tabs aparte).
+function CIT.Debug.dumpSpecs()
+  local api = _G.C_CharacterAdvancement
+  local u = "target"
+  local cn = CIT.CAReader.className(u)
+  if not cn then CIT.Log("debug: no class."); return end
+  local active, unlocked = CIT.CAReader.inspectInfo(u)
+  local unlockedStr = type(unlocked) == "table" and ("{" .. table.concat(unlocked, ",") .. "}") or tostring(unlocked)
+  CIT.Log("active=" .. tostring(active) .. " unlocked=" .. unlockedStr)
+
+  -- GetCategories: puede separar specs de hero.
+  if type(api.GetCategories) == "function" then
+    local ok, cats = pcall(api.GetCategories, cn)
+    if ok and type(cats) == "table" then
+      for i, c in ipairs(cats) do
+        if type(c) == "table" then
+          local parts = {}
+          for k, v in pairs(c) do parts[#parts + 1] = k .. "=" .. tostring(v) end
+          CIT.Log("  cat[" .. i .. "] " .. table.concat(parts, " "))
+        else
+          CIT.Log("  cat[" .. i .. "] " .. tostring(c))
+        end
+      end
+    else
+      CIT.Log("  GetCategories -> " .. tostring(cats))
+    end
+  end
+
+  -- Por tab: total y aprendidos (para ver cuáles tienen puntos).
+  local slot = active or 1
+  local tree = CIT.CAReader.classTree(cn, slot)
+  local build = CIT.CAReader.unitBuild(u, slot)
+  local total, learned, ord = {}, {}, {}
+  for _, n in ipairs(tree) do
+    if total[n.Tab] == nil then total[n.Tab] = 0; ord[#ord + 1] = n.Tab end
+    total[n.Tab] = total[n.Tab] + 1
+    if build[n.ID] then learned[n.Tab] = (learned[n.Tab] or 0) + 1 end
+  end
+  for _, tb in ipairs(ord) do
+    CIT.Log("  TAB " .. tb .. " total=" .. total[tb] .. " learned=" .. (learned[tb] or 0))
+  end
+end
+
 -- /coait          -> resumen por tab
 -- /coait class    -> nodos del tab Class con posiciones
 -- /coait api      -> funciones de la API CoA
@@ -252,6 +296,8 @@ _G.SlashCmdList["COAIT"] = function(msg)
     CIT.safe(CIT.Debug.findMissing)
   elseif msg == "cats" then
     CIT.safe(CIT.Debug.dumpCats)
+  elseif msg == "specs" then
+    CIT.safe(CIT.Debug.dumpSpecs)
   else
     CIT.safe(CIT.Debug.dumpTarget)
   end
