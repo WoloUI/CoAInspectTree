@@ -17,10 +17,13 @@ function R.className(unit)
 end
 
 -- Árbol completo de la clase (lista de nodos crudos). {} si falla.
+-- withMasteries=false devuelve el árbol COMPLETO (incluye los talentos de clase
+-- que el modo true omite); confirmado in-game: con true faltaban ~12-14
+-- aprendidos, con false faltan 0.
 function R.classTree(className, slot)
   local api = CA()
   if not (api and type(api.GetTalentsByClass) == "function" and className) then return {} end
-  local ok, entries = pcall(api.GetTalentsByClass, className, slot, true)
+  local ok, entries = pcall(api.GetTalentsByClass, className, slot, false)
   if ok and type(entries) == "table" then return entries end
   return {}
 end
