@@ -20,10 +20,10 @@ _G.C_CharacterAdvancement = {
     return { { EntryId = 31319, Rank = 1, Locked = 0 } }
   end,
   UnitTalentRankByID = function(unit, id, slot)
-    local maxByer = { [31319] = 1, [30056] = 3, [99999] = 5 }
-    if id == 99999 then return 0, maxByer[id] end  -- nodo no aprendido
-    local rank = (slot == 2 and id == 30056) and 2 or 1
-    return rank, maxByer[id]
+    -- En unidades inspeccionadas el rank llega como nil; solo el maxRank (2º
+    -- valor) es fiable. El rank real proviene de GetInspectedBuild.Rank.
+    local maxByer = { [31319] = 1, [30056] = 3 }
+    return nil, maxByer[id]
   end,
   GetInspectInfo = function(unit) return 2, { 1, 2 } end,
 }
@@ -47,16 +47,10 @@ local active, unlocked = R.inspectInfo("target")
 T.eq(active, 2, "inspectInfo activeSpec")
 T.eq(#unlocked, 2, "inspectInfo unlockedSpecs")
 
--- buildFromTree: marca CADA nodo del árbol consultando UnitTalentRankByID,
--- así el marcado es completo aunque EntryId de GetInspectedBuild no coincida.
-local rawTree = {
-  { ID = 31319 }, { ID = 30056 }, { ID = 99999 },
-}
-local bft = R.buildFromTree("target", 2, rawTree)
-T.eq(bft[31319].rank, 1, "buildFromTree rank de 31319")
-T.eq(bft[30056].rank, 2, "buildFromTree rank de 30056 en slot 2")
-T.eq(bft[30056].maxRank, 3, "buildFromTree maxRank de 30056")
-T.eq(bft[99999], nil, "buildFromTree excluye nodo con rank 0")
+-- Con rank nil de UnitTalentRankByID, unitBuild conserva el Rank de
+-- GetInspectedBuild (regresión de marcado que hay que evitar).
+local b1 = R.unitBuild("target", 1)
+T.eq(b1[31319].rank, 1, "unitBuild slot1 conserva Rank de GetInspectedBuild")
 
 -- Robustez: si la API tira error, devuelve valores seguros.
 _G.C_CharacterAdvancement.GetTalentsByClass = function() error("boom") end

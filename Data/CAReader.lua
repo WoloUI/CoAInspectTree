@@ -48,30 +48,6 @@ function R.unitBuild(unit, slot)
   return out
 end
 
--- Build aprendida consultando el rango de CADA nodo del árbol de clase con
--- UnitTalentRankByID(unit, node.ID, slot). Esto marca de forma completa aunque
--- el EntryId de GetInspectedBuild no coincida con el ID del nodo. Devuelve
--- { [ID] = { rank, maxRank } } solo para nodos con rank > 0. Cae a unitBuild
--- si UnitTalentRankByID no existe.
-function R.buildFromTree(unit, slot, rawTree)
-  local api = CA()
-  local out = {}
-  if not api then return out end
-  if type(api.UnitTalentRankByID) == "function" and type(rawTree) == "table" then
-    for _, node in ipairs(rawTree) do
-      local id = node.ID
-      if id then
-        local ok, rank, maxRank = pcall(api.UnitTalentRankByID, unit, id, slot)
-        if ok and type(rank) == "number" and rank > 0 then
-          out[id] = { rank = rank, maxRank = maxRank }
-        end
-      end
-    end
-    return out
-  end
-  return R.unitBuild(unit, slot)
-end
-
 -- (activeSpec, unlockedSpecs) del unit inspeccionado.
 function R.inspectInfo(unit)
   local api = CA()

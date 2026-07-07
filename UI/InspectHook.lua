@@ -1,9 +1,5 @@
--- RECONOCIMIENTO IN-GAME PENDIENTE (Task 9 Step 1):
--- Con el inspect abierto, ejecutar en el juego para hallar los nombres reales:
---   /dump InspectFrame and InspectFrame:GetName()
---   /run for i=1,select("#",WorldFrame:GetChildren()) do local f=select(i,WorldFrame:GetChildren()); if f:IsVisible() and f.unit then print(f:GetName()) end end
--- Anotar aquí el frame real de inspect y el patrón de botones de spec, y
--- rellenar `getInspectFrame` (lista `names`) y `hookSpecButtons` (`specButtonPattern`).
+-- El cambio de spec se maneja con el selector PROPIO del panel (TreePanel.SetSpecs),
+-- que re-consulta el árbol de la spec elegida. No dependemos de los botones nativos.
 local CIT = _G.CoAInspectTree
 if not CIT then CIT = {}; _G.CoAInspectTree = CIT end
 CIT.InspectHook = {}
@@ -53,27 +49,28 @@ local function renderFor(unit, slot)
     return
   end
   current.retries = 0
-  -- Marcado completo: consultar el rango de cada nodo del árbol directamente.
-  local buildMap = CIT.CAReader.buildFromTree(unit, slot, current.tree)
+  -- Rank desde GetInspectedBuild (en inspect, UnitTalentRankByID da rank nil).
+  local buildMap = CIT.CAReader.unitBuild(unit, slot)
   local model = CIT.TreeModel.build(current.tree, buildMap)
   local inspectFrame = getInspectFrame()
   if inspectFrame then CIT.TreePanel.AttachTo(inspectFrame) end
   CIT.TreePanel.Get().title:SetText((UnitName(unit) or "") .. " — spec " .. tostring(slot))
+
+  -- Selector de spec propio: al hacer clic, re-consulta el árbol de esa spec.
+  local _, unlocked = CIT.CAReader.inspectInfo(unit)
+  local specs = {}
+  if type(unlocked) == "table" then
+    for _, s in ipairs(unlocked) do specs[#specs + 1] = s end
+  elseif type(unlocked) == "number" then
+    for s = 1, unlocked do specs[#specs + 1] = s end
+  end
+  if #specs == 0 then specs = { slot } end
+  CIT.TreePanel.SetSpecs(specs, slot, function(s) renderFor(unit, s) end)
+
   CIT.TreePanel.Render(model)
   CIT.TreePanel.Show()
 end
 CIT.InspectHook.RenderFor = renderFor
-
--- Re-resalta el árbol ya cargado para otra spec sin recargar la estructura.
-local function restyleFor(slot)
-  if not (current.unit and current.tree) then return end
-  current.slot = slot
-  local buildMap = CIT.CAReader.buildFromTree(current.unit, slot, current.tree)
-  local model = CIT.TreeModel.build(current.tree, buildMap)
-  CIT.TreePanel.Get().title:SetText((UnitName(current.unit) or "") .. " — spec " .. tostring(slot))
-  CIT.TreePanel.Render(model)
-end
-CIT.InspectHook.RestyleFor = restyleFor
 
 -- Al llegar la data CoA del inspeccionado, renderizar su spec activa.
 CIT.RegisterEvent("INSPECT_CHARACTER_ADVANCEMENT_RESULT", function()
@@ -88,24 +85,6 @@ end)
 CIT.RegisterEvent("PLAYER_TARGET_CHANGED", function()
   local f = getInspectFrame()
   if not f then CIT.TreePanel.Hide() end
-end)
-
--- Engancha los botones del selector de spec del panel nativo, si existen.
--- Rellenar `specButtonPattern` con el patrón real hallado en el Step 1.
-local function hookSpecButtons()
-  local specButtonPattern = nil  -- p.ej. "CoATalentsSpecButton%d"
-  if not specButtonPattern then return end
-  for slot = 1, 3 do
-    local btn = _G[specButtonPattern:format(slot)]
-    if btn and not btn.__coaitHooked then
-      btn.__coaitHooked = true
-      btn:HookScript("OnClick", function() restyleFor(slot) end)
-    end
-  end
-end
-
-CIT.RegisterEvent("INSPECT_CHARACTER_ADVANCEMENT_RESULT", function()
-  CIT.safe(hookSpecButtons)
 end)
 
 -- Muestra el panel solo cuando la pestaña Build del inspect está activa.
