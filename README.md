@@ -8,8 +8,6 @@ On a classless server, "what class is that guy" is the wrong question — the re
 you the tree. CoA Inspect Tree draws the full Character Advancement grid of whoever you
 inspect, right next to the inspect frame, with every learned node lit up and ranked.
 
-Version **1.0** — 58 automated tests.
-
 ---
 
 ## Features
@@ -82,17 +80,6 @@ Diagnostics, all printing to chat:
 | `/coait findmiss` | Hunts for nodes missing from the grid |
 | `/coait cats` | Category dump |
 | `/coait api` | Which Character Advancement API functions exist on this realm |
-
-## Development
-
-```
-lua5.1 tests/run_all.lua     # 58 checks, headless, no game needed
-```
-
-The data layer is pure and fully covered: `CAReader` (API access and fallbacks),
-`TreeModel.build` (raw entries + learned build → positioned model, choice-node collapsing,
-edges), `TreeModel.layoutTabs`, `TreeModel.bounds` and `TreeModel.fitScale`, plus the
-inspect-frame gating. Fixtures in `tests/fixtures/`.
 
 ## Credits
 
