@@ -87,6 +87,16 @@ Diagnostics, all printing to chat:
 | `/coait cats` | Category dump |
 | `/coait api` | Which Character Advancement API functions exist on this realm |
 
+## Support
+
+This addon is free, and it stays free.
+
+If it helped you figure out a build — or settle an argument about one — you can buy me a
+coffee at **[ko-fi.com/woloui](https://ko-fi.com/woloui)**. Completely optional and
+genuinely appreciated. ☕
+
+Either way, thanks for playing with it. Bug reports and ideas are worth just as much.
+
 ## Credits
 
 Made by **WoloUI**.
