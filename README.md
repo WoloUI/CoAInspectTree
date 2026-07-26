@@ -8,6 +8,12 @@ On a classless server, "what class is that guy" is the wrong question — the re
 you the tree. CoA Inspect Tree draws the full Character Advancement grid of whoever you
 inspect, right next to the inspect frame, with every learned node lit up and ranked.
 
+![The talent tree panel beside the inspect frame](.github/screenshots/inspect-tree.png)
+
+The Class tab on the left, their spec on the right, learned nodes lit with a coloured ring
+and their rank, everything else dimmed — plus the spec selector, the Compare button and the
+scale controls in the panel header.
+
 ---
 
 ## Features
