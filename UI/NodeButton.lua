@@ -47,17 +47,42 @@ function CIT.NodeButton.Create(parent)
   b:SetWidth(NODE_SIZE)
   b:SetHeight(NODE_SIZE)
 
-  -- Borde: cuadro sólido detrás del icono; el reborde asoma como marco de color.
-  b.border = b:CreateTexture(nil, "BACKGROUND")
+  -- Placa oscura exterior: canto de 1px alrededor de cada nodo (socket).
+  b.plate = b:CreateTexture(nil, "BACKGROUND")
+  b.plate:SetTexture(SOLID)
+  b.plate:SetPoint("TOPLEFT", b, "TOPLEFT", -2.5, 2.5)
+  b.plate:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 2.5, -2.5)
+  b.plate:SetVertexColor(0.02, 0.02, 0.03, 1)
+
+  -- Borde: anillo de color (aprendido) o gris tenue (socket vacío) sobre la placa.
+  b.border = b:CreateTexture(nil, "BORDER")
   b.border:SetTexture(SOLID)
   b.border:SetPoint("TOPLEFT", b, "TOPLEFT", -1.5, 1.5)
   b.border:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 1.5, -1.5)
 
+  -- Icono recortado para quitar el marco negro por defecto de los iconos de WoW.
   b.icon = b:CreateTexture(nil, "ARTWORK")
   b.icon:SetAllPoints(b)
+  b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-  b.rank = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  b.rank:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 2, -2)
+  -- Placa oscura tras el texto de rango, para que sea legible sobre cualquier icono.
+  b.rankPlate = b:CreateTexture(nil, "OVERLAY")
+  b.rankPlate:SetTexture(SOLID)
+  b.rankPlate:SetVertexColor(0, 0, 0, 0.75)
+  b.rankPlate:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 1, -1)
+
+  b.rank = b:CreateFontString(nil, "OVERLAY")
+  b.rank:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+  b.rank:SetPoint("CENTER", b.rankPlate, "CENTER", 0, 0)
+
+  -- Feedback de hover: resplandor aditivo suave.
+  b:SetHighlightTexture(SOLID)
+  local hl = b:GetHighlightTexture()
+  if hl then
+    hl:SetBlendMode("ADD")
+    hl:SetVertexColor(1, 1, 1, 0.12)
+    hl:SetAllPoints(b)
+  end
 
   return b
 end
@@ -73,15 +98,16 @@ function CIT.NodeButton.Style(button, node)
     button.icon:SetDesaturated(false)
     button.icon:SetVertexColor(1, 1, 1)
     button.icon:SetAlpha(1)
-    button.border:SetVertexColor(c[1], c[2], c[3])
-    button.border:SetAlpha(1)
-    button.border:Show()
+    button.border:SetVertexColor(c[1], c[2], c[3], 1)
+    button.plate:SetAlpha(1)
   else
-    -- No aprendido: atenuado pero visible, para ver el árbol completo.
+    -- No aprendido: casilla vacía. Icono muy hundido, socket gris tenue, para
+    -- ver la estructura del árbol sin competir con lo aprendido.
     button.icon:SetDesaturated(true)
-    button.icon:SetVertexColor(0.85, 0.85, 0.85)
-    button.icon:SetAlpha(0.6)
-    button.border:Hide()
+    button.icon:SetVertexColor(0.8, 0.8, 0.8)
+    button.icon:SetAlpha(0.35)
+    button.border:SetVertexColor(0.22, 0.22, 0.27, 1)
+    button.plate:SetAlpha(0.85)
   end
 
   if node.known and node.rank and node.rank > 0 then
@@ -90,8 +116,18 @@ function CIT.NodeButton.Style(button, node)
     else
       button.rank:SetText(tostring(node.rank))
     end
+    -- Dorado si está maxeado; blanco si es parcial.
+    if node.maxRank and node.rank >= node.maxRank then
+      button.rank:SetTextColor(1, 0.82, 0)
+    else
+      button.rank:SetTextColor(1, 1, 1)
+    end
+    button.rankPlate:SetWidth(button.rank:GetStringWidth() + 4)
+    button.rankPlate:SetHeight(12)
+    button.rankPlate:Show()
     button.rank:Show()
   else
+    button.rankPlate:Hide()
     button.rank:Hide()
   end
 

@@ -3,6 +3,7 @@ local files = {
   "tests/test_log.lua",
   "tests/test_treemodel.lua",
   "tests/test_careader.lua",
+  "tests/test_inspecthook.lua",
 }
 local allOk = true
 for _, f in ipairs(files) do

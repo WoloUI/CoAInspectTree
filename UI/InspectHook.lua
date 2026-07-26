@@ -7,10 +7,14 @@ CIT.InspectHook = {}
 -- Estado del inspect en curso.
 local current = { unit = nil, className = nil, tree = nil, slot = nil }
 
--- Devuelve el frame de inspect visible, o nil. Rellenar con el nombre real
--- hallado en el Step 1 de reconocimiento.
+-- Devuelve el frame de inspect visible, o nil. En Ascension (realms CoA) la UI
+-- moddeada oculta los frames stock y usa AscensionInspectFrame; en clientes
+-- stock/Epoch es InspectFrame. Comprobamos ambos para cubrir los dos casos.
 local function getInspectFrame()
-  local names = { "InspectFrame", "InspectPaperDollFrame" }
+  local names = {
+    "AscensionInspectFrame", "AscensionInspectPaperDollFrame",
+    "InspectFrame", "InspectPaperDollFrame",
+  }
   for _, n in ipairs(names) do
     local f = _G[n]
     if f and f.IsVisible and f:IsVisible() then return f end
@@ -21,6 +25,11 @@ end
 -- Carga el árbol de la clase del unit y renderiza para la spec `slot`.
 local function renderFor(unit, slot)
   if not CIT.enabled then return end
+  -- El panel solo tiene sentido junto a un inspect abierto. En CoA el evento
+  -- INSPECT_CHARACTER_ADVANCEMENT_RESULT llega cada vez que alguien inspecciona
+  -- al target (otros addons lo hacen en automático durante combate), así que sin
+  -- esta guarda el panel se abría solo. Ver getInspectFrame().
+  if not getInspectFrame() then CIT.TreePanel.Hide(); return end
   local className = CIT.CAReader.className(unit)
   if not className then return end
   current.unit = unit

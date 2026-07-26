@@ -38,6 +38,34 @@ function CIT.TreeModel.build(rawTree, buildMap)
     end
   end
 
+  -- Colapsar nodos de ELECCIÓN (2+ opciones): comparten la misma celda (misma
+  -- tab y posición) y un Group común. Renderizarlos superpuestos hacía que la
+  -- opción NO aprendida (atenuada) tapara a la aprendida, que "no se iluminaba".
+  -- Nos quedamos con una sola opción por celda: la aprendida si la hay; si
+  -- ninguna, la de menor ID (determinista, para no depender del orden de pairs).
+  local groups = {}   -- cellKey -> lista de IDs
+  for id, node in pairs(model.nodes) do
+    local key = tostring(node.tab) .. "|" .. tostring(node.x) .. "|" .. tostring(node.y)
+    groups[key] = groups[key] or {}
+    table.insert(groups[key], id)
+  end
+  for _, ids in pairs(groups) do
+    if #ids > 1 then
+      local keep = model.nodes[ids[1]]
+      for i = 2, #ids do
+        local cand = model.nodes[ids[i]]
+        if cand.known ~= keep.known then
+          if cand.known then keep = cand end
+        elseif cand.id < keep.id then
+          keep = cand
+        end
+      end
+      for _, id in ipairs(ids) do
+        if id ~= keep.id then model.nodes[id] = nil end
+      end
+    end
+  end
+
   -- Aristas: por cada nodo, una arista a cada ConnectedNode que exista en el set.
   for id, node in pairs(model.nodes) do
     for _, targetId in ipairs(node.connected) do

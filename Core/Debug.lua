@@ -276,10 +276,72 @@ function CIT.Debug.dumpSpecs()
   end
 end
 
+-- Diagnostica los nodos de ELECCIÓN (2+ opciones) del target inspeccionado:
+-- los agrupa por campo Group (no-cero) y por posición (tab:x:y) y, para cada
+-- miembro, reporta si nuestro método actual (EntryId de GetInspectedBuild) lo
+-- marca como conocido vs. lo que dice UnitKnownID(unit, ID, spec). Revela por
+-- qué los nodos de elección hero no se iluminan (overlap de posición o
+-- desajuste de namespace de ID).
+function CIT.Debug.dumpChoice()
+  local u = "target"
+  local api = _G.C_CharacterAdvancement
+  local cn = CIT.CAReader.className(u)
+  if not cn then CIT.Log("choice: no CoA class on target (inspecciona un player)."); return end
+  local active = CIT.CAReader.inspectInfo(u) or 1
+  local tree = CIT.CAReader.classTree(cn, active)
+  if #tree == 0 then CIT.Log("choice: árbol vacío (data no cargada aún?)."); return end
+  local build = CIT.CAReader.unitBuild(u, active)
+
+  local function known1(id) return build[id] ~= nil end
+  local function knownAPI(id)
+    if type(api.UnitKnownID) ~= "function" then return "n/a" end
+    local ok, k = pcall(api.UnitKnownID, u, id, active)
+    if not ok then return "err" end
+    return k and "Y" or "n"
+  end
+
+  -- Agrupar por Group (no-cero) y por posición tab:x:y.
+  local byGroup, byPos = {}, {}
+  for _, n in ipairs(tree) do
+    local g = n.Group
+    if g and g ~= 0 then
+      byGroup[g] = byGroup[g] or {}
+      byGroup[g][#byGroup[g] + 1] = n
+    end
+    local pk = tostring(n.Tab) .. ":" .. tostring(n.PositionX) .. ":" .. tostring(n.PositionY)
+    byPos[pk] = byPos[pk] or {}
+    byPos[pk][#byPos[pk] + 1] = n
+  end
+
+  local function report(label, buckets, keyIsPos)
+    local shown = 0
+    for key, list in pairs(buckets) do
+      if #list > 1 then
+        shown = shown + 1
+        CIT.Log(label .. " " .. tostring(key) .. " (" .. #list .. " opciones):")
+        for _, n in ipairs(list) do
+          CIT.Log("   ID=" .. tostring(n.ID) .. " '" .. tostring(n.Name) .. "'"
+            .. " pos=" .. tostring(n.PositionX) .. "," .. tostring(n.PositionY)
+            .. " grp=" .. tostring(n.Group)
+            .. " inBuild=" .. (known1(n.ID) and "Y" or "n")
+            .. " UnitKnownID=" .. knownAPI(n.ID))
+        end
+      end
+    end
+    if shown == 0 then CIT.Log(label .. ": ninguno con 2+ miembros.") end
+  end
+
+  CIT.Log("=== CHOICE dump: " .. tostring(cn) .. " spec=" .. tostring(active)
+    .. " nodos=" .. #tree .. " enBuild=" .. (function() local c=0 for _ in pairs(build) do c=c+1 end return c end)() .. " ===")
+  report("GROUP", byGroup, false)
+  report("POS", byPos, true)
+end
+
 -- /coait          -> resumen por tab
 -- /coait class    -> nodos del tab Class con posiciones
 -- /coait api      -> funciones de la API CoA
 -- /coait miss     -> aprendidos que no están en el árbol
+-- /coait choice   -> nodos de elección (2+ opciones): overlap y estado conocido
 _G.SLASH_COAIT1 = "/coait"
 _G.SlashCmdList = _G.SlashCmdList or {}
 _G.SlashCmdList["COAIT"] = function(msg)
@@ -298,6 +360,8 @@ _G.SlashCmdList["COAIT"] = function(msg)
     CIT.safe(CIT.Debug.dumpCats)
   elseif msg == "specs" then
     CIT.safe(CIT.Debug.dumpSpecs)
+  elseif msg == "choice" then
+    CIT.safe(CIT.Debug.dumpChoice)
   else
     CIT.safe(CIT.Debug.dumpTarget)
   end

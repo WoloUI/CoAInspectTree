@@ -22,8 +22,10 @@ function CIT.RegisterEvent(event, handler)
   dispatcher:RegisterEvent(event)
 end
 
--- Al login: detectar si el realm soporta CoA.
+-- Al login: preparar SavedVariables y detectar si el realm soporta CoA.
 CIT.RegisterEvent("PLAYER_LOGIN", function()
+  CoAInspectTreeDB = CoAInspectTreeDB or {}
+  if type(CoAInspectTreeDB.scale) ~= "number" then CoAInspectTreeDB.scale = 0.75 end
   CIT.enabled = (_G.C_CharacterAdvancement ~= nil)
   if CIT.enabled then
     CIT.Log("active (Character Advancement detected).")

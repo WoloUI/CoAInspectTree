@@ -2,7 +2,7 @@
 ## Title: CoA Inspect Tree
 ## Notes: Shows the CoA talent tree when inspecting a player
 ## Author: WoloUI
-## Version: 0.6
+## Version: 1.0
 ## SavedVariables: CoAInspectTreeDB
 
 Core\Log.lua

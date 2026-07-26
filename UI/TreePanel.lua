@@ -13,6 +13,17 @@ local TAB_HEADER = 18  -- alto del título de cada Tab (dentro del content)
 local TAB_COL_GAP = 26 -- separación horizontal entre columnas de Tab
 local SECTION_GAP = 48 -- separación entre el árbol del inspeccionado y el tuyo
 
+local SCALE_MIN, SCALE_MAX, SCALE_STEP = 0.5, 1.5, 0.05
+
+-- Lee la escala guardada, con default 0.75 y recorte al rango permitido.
+local function savedScale()
+  local db = _G.CoAInspectTreeDB
+  local s = db and db.scale
+  if type(s) ~= "number" then s = 0.75 end
+  if s < SCALE_MIN then s = SCALE_MIN elseif s > SCALE_MAX then s = SCALE_MAX end
+  return s
+end
+
 local frame, scroll, content
 
 -- Crea el panel una sola vez. Contiene un ScrollFrame con un content interno,
@@ -48,6 +59,48 @@ function TP.Get()
   cmp.txt:SetText("Compare")
   cmp:Hide()
   frame.compareBtn = cmp
+
+  -- Controles de escala del panel: label + [-] [+] [Reset]. Usamos botones
+  -- (paso discreto) en vez de slider: un slider hijo del frame que escala se
+  -- reescala bajo el cursor al arrastrarlo y se traba. Persistente en la DB.
+  local function makeHdrButton(w, text)
+    local b = CreateFrame("Button", nil, frame)
+    b:SetWidth(w); b:SetHeight(18)
+    b:SetBackdrop({ bgFile = SOLID, edgeFile = SOLID, tile = false, edgeSize = 1,
+      insets = { left = 0, right = 0, top = 0, bottom = 0 } })
+    b:SetBackdropColor(0.10, 0.10, 0.13, 0.9)
+    b:SetBackdropBorderColor(0.25, 0.25, 0.30, 1)
+    b.txt = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    b.txt:SetAllPoints(b)
+    b.txt:SetText(text)
+    return b
+  end
+
+  local resetBtn = makeHdrButton(44, "Reset")
+  resetBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(TITLE_H + 4))
+  local plusBtn = makeHdrButton(20, "+")
+  plusBtn:SetPoint("RIGHT", resetBtn, "LEFT", -4, 0)
+  local minusBtn = makeHdrButton(20, "-")
+  minusBtn:SetPoint("RIGHT", plusBtn, "LEFT", -4, 0)
+
+  local scaleLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  scaleLabel:SetPoint("RIGHT", minusBtn, "LEFT", -6, 0)
+  frame.scaleLabel = scaleLabel
+
+  local function setScale(v)
+    v = math.floor(v * 100 + 0.5) / 100        -- redondea a 1% para evitar ruido
+    if v < SCALE_MIN then v = SCALE_MIN elseif v > SCALE_MAX then v = SCALE_MAX end
+    frame:SetScale(v)
+    scaleLabel:SetText("Scale " .. math.floor(v * 100 + 0.5) .. "%")
+    if _G.CoAInspectTreeDB then _G.CoAInspectTreeDB.scale = v end
+  end
+  frame.setScale = setScale
+
+  minusBtn:SetScript("OnClick", function() setScale(frame:GetScale() - SCALE_STEP) end)
+  plusBtn:SetScript("OnClick", function() setScale(frame:GetScale() + SCALE_STEP) end)
+  resetBtn:SetScript("OnClick", function() setScale(0.75) end)
+
+  setScale(savedScale())
 
   -- Fila de selector de spec (botones propios, no dependemos del panel nativo).
   frame.specRow = CreateFrame("Frame", nil, frame)
